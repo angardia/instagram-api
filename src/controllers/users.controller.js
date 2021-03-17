@@ -1,24 +1,116 @@
 const md5 = require("md5");
 const User = require("../models/user");
+const Post = require("../models/post");
 const jwt = require('jsonwebtoken');
 const { jwtSecret } = require("../config/environment/index");
 
 class UserController {
 
-    static checkdup(req, res) {
-        User.findOne({
-            email: req.params.email,
-        }).then(user => {
-            // console.log(user);
+    static async follow(req, res) {
+        const userToFollowId = req.params.id;
+        const userId = req.user._id;
+        try {
+            if(userToFollowId === userId) res.sendStatus(400);
+            const followerArr = await User.findOne({ _id: userToFollowId, followers : userId });
+            if (followerArr === null) {
+                const follower = await User.findByIdAndUpdate({ _id: userToFollowId }, { $addToSet: { followers: userId } }, { useFindAndModify: false, new: true });
+                return res.status(200).send(follower);
+            }
+            const follower = await User.findByIdAndUpdate({ _id: userToFollowId }, { $pull: { followers: userId } }, { useFindAndModify: false, new: true });
+            return res.status(200).send(follower);
+        }
+        catch (e) {
+            console.log(e);
+            res.sendStatus(500);
+        }
+    }
+
+    static async editEmail(req, res) {
+        const { username } = req.query;
+        console.log(username);
+    }
+
+    static async getAll(req, res) {
+        //get username from request query
+        const { username } = req.query;
+
+        try {
+            const user = await User.find({
+                username: new RegExp(username, "i")
+            });
+            res.json(user.map(user => {
+                return {
+                    _id: user._id,
+                    username: user.username,
+                    createdAt: user.createdAt,
+                    avatar: user.avatar,
+                    bio: user.bio
+                }
+            }));
+        }
+        catch (e) {
+            console.log(e);
+            res.sendStatus(500);
+        }
+    }
+
+    static async userInfo(req, res) {
+        const username = req.params.username;
+        console.log('user')
+        try {
+            const user = await User.findOne({ username });
             if (!user) {
-                res.send(true);
+                res.sendStatus(404);
                 return;
             }
-            res.send(false);
-        }).catch(err => {
-            console.log(err);
+            const { _id, avatar } = user;
+            res.json({
+                _id, username, avatar
+            });
+        }
+        catch (e) {
             res.sendStatus(500);
-        })
+        }
+    }
+
+    static async posts(req, res) {
+        //username
+        const username = req.params.username;
+
+        try {
+            const user = await User.findOne({ username });
+            if (!user) {
+                res.sendStatus(404);
+                return;
+            }
+            const posts = await Post.find({ user: user._id })
+                .populate("user", ["username", "avatar"]);
+            res.json(posts);
+        }
+        catch (e) {
+            console.log(e);
+            res.sendStatus(500);
+        }
+    }
+    // user?email=www@gmail.com
+    static checkdup(req, res) {
+        const { username, email } = req.query;
+        console.log(username, email);
+        // if (!username && !email) {
+        // 	res.sendStatus(400);
+        // 	return;
+        // }
+        let property = email ? "email" : "username";
+        // console.log(property);
+        try {
+            User.exists({
+                [property]: req.query[property]
+            }).then(isExist => {
+                res.json(isExist);
+            });
+        } catch (err) {
+            res.status(400).json(err);
+        }
     }
 
     static create(req, res) {
@@ -55,31 +147,17 @@ class UserController {
         })
     }
 
-    static me(req, res) {
-        // try {
-        //     const payload = jwt.verify(req.body.token,  jwtSecret);
+    static async me(req, res) {
+        // console.log(req.user._id);
+        const user = await User.findById(req.user._id)
+        // res.send(req.user);
+        res.send(user);
 
-        //     User.findById(
-        //         payload._id
-        //     ).then(user => {
-        //         if (!user) {
-        //             res.sendStatus(401);
-        //             return;
-        //         }
-        //         res.send({
-        //             _id : user._id,
-        //             username : user.username,
-        //             email: user.email
-        //         });
-        //     }).catch(e => {
-        //         res.sendStatus(500);
-        //     })
-        // }
-        // catch (e) {
-        //     res.sendStatus(401);
-        // }
-        res.send(req.user);
     }
+
+    // static update(req, res) {
+    //     User.findOneAndUpdate
+    // }
 
 }
 

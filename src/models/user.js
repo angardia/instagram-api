@@ -13,7 +13,11 @@ const User = mongoose.model("User", {
         required: true
     },
     bio: String,
-    avatar: String,
+    avatar: {
+       type : String ,
+        default : "https://fpia-bucket.s3.eu-central-1.amazonaws.com/avatarTest.png"
+    },
+    followers: [mongoose.ObjectId],
     createdAt: {
         type: Date,
         required: true,
