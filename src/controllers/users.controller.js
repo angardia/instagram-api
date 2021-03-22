@@ -2,7 +2,7 @@ const md5 = require("md5");
 const Mongoose = require('mongoose');
 const fs = require("fs");
 const aws = require("aws-sdk");
-aws.config.loadFromPath("src/s3_config.json");
+const {accessKeyId, secretAccessKey, region} = require("../config/environment/index");
 const User = require("../models/user");
 const Post = require("../models/post");
 const jwt = require('jsonwebtoken');
@@ -10,7 +10,9 @@ const { jwtSecret } = require("../config/environment/index");
 const PostsController = require("./posts.controller");
 
 const s3 = new aws.S3({
-    params: { Bucket: "fpia-bucket" }
+    params: { Bucket: "fpia-bucket" },
+    accessKeyId: accessKeyId,
+    secretAccessKey: secretAccessKey
 });
 
 class UserController {

@@ -1,5 +1,5 @@
 node_modules
-s3_config.json
+.env
 public
 !public/posts/.gitkeep
 .vscode

@@ -3,13 +3,16 @@ const Mongoose = require('mongoose')
 const ObjectId = Mongoose.Types.ObjectId;
 const fs = require("fs");
 const aws = require("aws-sdk");
-aws.config.loadFromPath("src/s3_config.json");
+// aws.config.loadFromPath("src/s3_config.json");
+const {accessKeyId, secretAccessKey, region} = require("../config/environment/index");
 const Post = require("../models/post");
 const User = require("../models/user");
 const Comment = require("../models/comment");
 
 const s3 = new aws.S3({
-    params: { Bucket: "fpia-bucket" }
+    params: { Bucket: "fpia-bucket" },
+    accessKeyId: accessKeyId,
+    secretAccessKey: secretAccessKey
 });
 
 
@@ -34,12 +37,12 @@ class PostsController {
         }
 
     }
-    static async removeComment(req, res) {
+    static async deleteComment(req, res) {
         const commentId = req.params.id;
         try {
-            const removeComment = await Comment.findByIdAndRemove({ _id:commentId },  { useFindAndModify: false, new: true })
+            const deletingComment = await Comment.findByIdAndDelete(commentId);
             // console.log(removeComment);
-            res.status(201).send(removeComment);
+            res.status(201).send(deletingComment);
         }
         catch (e) {
             console.log(e);
