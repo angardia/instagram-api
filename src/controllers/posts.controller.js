@@ -34,7 +34,19 @@ class PostsController {
         }
 
     }
+    static async removeComment(req, res) {
+        const commentId = req.params.id;
+        try {
+            const removeComment = await Comment.findByIdAndRemove({ _id:commentId },  { useFindAndModify: false, new: true })
+            // console.log(removeComment);
+            res.status(201).send(removeComment);
+        }
+        catch (e) {
+            console.log(e);
+            res.sendStatus(400);
+        }
 
+    }
 
     static async addComment(req, res) {
 

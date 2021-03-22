@@ -10,6 +10,7 @@ const upload = multer({ dest: "public/posts" });
 
 
 routes.put("/user", UsersController.create);
+routes.post("/user/edit/:id", auth, upload.single("image"), UsersController.editUser);
 routes.post("/user/login", UsersController.login);
 routes.post("/user/me", auth, UsersController.me);
 routes.post("/user/:id/follow", auth, UsersController.follow);
@@ -21,6 +22,7 @@ routes.get("/user", auth, UsersController.getAll);
 
 routes.post("/post/:id/likes", auth, PostsController.likes);
 routes.put("/post/:id/comment", auth, PostsController.addComment);
+routes.post("/post/comment/:id", PostsController.removeComment);
 routes.get("/post/:id/comment", auth, PostsController.getComments);
 routes.get("/post", auth, PostsController.feed);
 routes.put("/post", auth, upload.single("image"), PostsController.create);

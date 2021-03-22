@@ -1,17 +1,75 @@
 const md5 = require("md5");
+const Mongoose = require('mongoose');
+const fs = require("fs");
+const aws = require("aws-sdk");
+aws.config.loadFromPath("src/s3_config.json");
 const User = require("../models/user");
 const Post = require("../models/post");
 const jwt = require('jsonwebtoken');
 const { jwtSecret } = require("../config/environment/index");
+const PostsController = require("./posts.controller");
+
+const s3 = new aws.S3({
+    params: { Bucket: "fpia-bucket" }
+});
 
 class UserController {
+
+    static async editUser(req, res) {
+        const userId = req.params.id;
+        let pass;
+        console.log(req.body.password);
+        try {
+
+            if (req.body.password) {
+                pass = md5(req.body.password)
+            }
+            let location;
+            if (req.file) {
+                const { filename , originalname, mimetype } = req.file;
+                const fileContent = fs.readFileSync("public/posts/" + filename);
+                const params = {
+                    Key: originalname,
+                    Body: fileContent,
+                    ContentType: mimetype,
+                    ACL: "public-read",
+                };
+                const uploadData = await s3.upload(params, function (e, data) {
+                    if (e) {
+                        throw e;
+                    }
+                    console.log("Image uploaded successfully");
+                }).promise();
+
+                location = uploadData.Location;
+            }
+
+            const toUpdateUser = {
+                avatar: location,
+                bio: req.body.bio,
+                password: pass,
+                email: req.body.email
+            }
+            for (let prop in toUpdateUser) if (!toUpdateUser[prop]) delete toUpdateUser[prop];
+            const userToEdit = await User.findByIdAndUpdate(userId, toUpdateUser, { useFindAndModify: false, new: true });
+            PostsController.deleteFile(req.file.filename);
+            return res.status(200).send(userToEdit);
+        }
+        catch (e) {
+            console.log(e);
+            PostsController.deleteFile(req.file.filename);
+            res.sendStatus(400);
+        }
+
+
+    }
 
     static async follow(req, res) {
         const userToFollowId = req.params.id;
         const userId = req.user._id;
         try {
-            if(userToFollowId === userId) res.sendStatus(400);
-            const followerArr = await User.findOne({ _id: userToFollowId, followers : userId });
+            if (userToFollowId === userId) res.sendStatus(400);
+            const followerArr = await User.findOne({ _id: userToFollowId, followers: userId });
             if (followerArr === null) {
                 const follower = await User.findByIdAndUpdate({ _id: userToFollowId }, { $addToSet: { followers: userId } }, { useFindAndModify: false, new: true });
                 return res.status(200).send(follower);
@@ -24,12 +82,7 @@ class UserController {
             res.sendStatus(500);
         }
     }
-
-    static async editEmail(req, res) {
-        const { username } = req.query;
-        console.log(username);
-    }
-
+    
     static async getAll(req, res) {
         //get username from request query
         const { username } = req.query;
@@ -56,16 +109,15 @@ class UserController {
 
     static async userInfo(req, res) {
         const username = req.params.username;
-        console.log('user')
         try {
             const user = await User.findOne({ username });
             if (!user) {
                 res.sendStatus(404);
                 return;
             }
-            const { _id, avatar } = user;
+            const { _id, avatar, followers } = user;
             res.json({
-                _id, username, avatar
+                _id, username, avatar, followers
             });
         }
         catch (e) {
@@ -95,11 +147,10 @@ class UserController {
     // user?email=www@gmail.com
     static checkdup(req, res) {
         const { username, email } = req.query;
-        console.log(username, email);
-        // if (!username && !email) {
-        // 	res.sendStatus(400);
-        // 	return;
-        // }
+        if (!username && !email) {
+            res.sendStatus(400);
+            return;
+        }
         let property = email ? "email" : "username";
         // console.log(property);
         try {
@@ -123,6 +174,8 @@ class UserController {
                 res.status(400).send("from users.controller.js")
             });
     }
+
+
     static login(req, res) {
         User.findOne({
             username: req.body.username,
@@ -148,16 +201,11 @@ class UserController {
     }
 
     static async me(req, res) {
-        // console.log(req.user._id);
         const user = await User.findById(req.user._id)
-        // res.send(req.user);
         res.send(user);
 
     }
 
-    // static update(req, res) {
-    //     User.findOneAndUpdate
-    // }
 
 }
 
