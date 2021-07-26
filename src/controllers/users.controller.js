@@ -99,6 +99,7 @@ class UserController {
                     username: user.username,
                     createdAt: user.createdAt,
                     avatar: user.avatar,
+                    followers: user.followers,
                     bio: user.bio
                 }
             }));
@@ -205,7 +206,6 @@ class UserController {
     static async me(req, res) {
         const user = await User.findById(req.user._id)
         res.send(user);
-
     }
 
 
