@@ -19,10 +19,9 @@ routes.get("/user/:username/posts", auth, UsersController.posts);
 routes.get("/user/:username" , auth, UsersController.userInfo);
 routes.get("/user", auth, UsersController.getAll);
 
-
 routes.post("/post/:id/likes", auth, PostsController.likes);
 routes.put("/post/:id/comment", auth, PostsController.addComment);
-routes.post("/post/comment/:id", PostsController.deleteComment);
+routes.post("/post/comment/:id",auth, PostsController.deleteComment);
 routes.get("/post/:id/comment", auth, PostsController.getComments);
 routes.get("/post", auth, PostsController.feed);
 routes.put("/post", auth, upload.single("image"), PostsController.create);
